@@ -12,7 +12,7 @@
 * PoemCrawler.py: 古诗词爬虫，爬取包括朝代、作者、诗词标题及诗词内容在内的信息，爬取来源是shicimingju.com。
 * CutWord.py: 利用jieba模块对古诗词内容进行快速分词处理，并仅获取双字分词结果存储。
 * include/DB.py: 爬虫、分词程序进行存储的数据库操作程序。
-* include/boxcalendar.py: 修改[https://github.com/ccdjh/boxcalendar](https://github.com/ccdjh/boxcalendar)模块的程序，去掉了不必要的程序和输出，用于转换阳历生辰为农历。
+* include/boxcalendar.py: 修改[https://github.com/ccdjh/boxcalendar](https://github.com/ccdjh/boxcalendar) 模块的程序，去掉了不必要的程序和输出，用于转换阳历生辰为农历。
 
 ## 操作说明
 ```
