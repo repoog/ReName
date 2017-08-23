@@ -10,7 +10,7 @@ except ImportError:
 HOST = "localhost"
 PORT = 3306
 USER = "rename"
-PASS = "/*F0rCh1ldN@m3*/"
+PASS = ""
 DATABASE = "rename"
 
 
