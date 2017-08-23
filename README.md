@@ -12,10 +12,10 @@
 * PoemCrawler.py: 古诗词爬虫，爬取包括朝代、作者、诗词标题及诗词内容在内的信息，爬取来源是shicimingju.com。
 * CutWord.py: 利用jieba模块对古诗词内容进行快速分词处理，并仅获取双字分词结果存储。
 * include/DB.py: 爬虫、分词程序进行存储的数据库操作程序。
-* include/boxcalendar.py: 修改https://github.com/ccdjh/boxcalendar模块的程序，去掉了不必要的程序和输出，用于转换阳历生辰为农历。
+* include/boxcalendar.py: 修改[https://github.com/ccdjh/boxcalendar](https://github.com/ccdjh/boxcalendar)模块的程序，去掉了不必要的程序和输出，用于转换阳历生辰为农历。
 
 ## 操作说明
-`
+```
 usage: ReName.py [-h] -y year -m month -d day -H hour
 
 Name children with birth datetime and WuXing balance.
@@ -26,10 +26,10 @@ optional arguments:
   -m month    Month of birth date.
   -d day      Day of birth date.
   -H hour     Hour of birth datetime.
-`
+```
 
 ## 程序示例
-`
+```
 $ python ReName.py -y 2017 -m 8 -d 24 -H 0
 [-_-] 生辰：2017年8月24日, 0时
 [-_-] 五行缺：木, 火
@@ -63,7 +63,7 @@ $ python ReName.py -y 2017 -m 8 -d 24 -H 0
 太湖避兵
 方文(清朝)
 将近枫桥路，唯闻人语喧。北来兵肆掠，东去艇皆奔。震泽烟波迥，高秋风雨繁。此时期免患，艰苦复何论。
-`
+```
 
 ## 待改进处
 该程序有以下三处可待完善和改进：
