@@ -2,15 +2,15 @@
 # coding = utf-8
 
 try:
-    import MySQLdb
+    import pymysql
 except ImportError:
-    print "[!_!]ERROR INFO: You have to install MySQLdb module."
+    print("[!_!]ERROR INFO: You have to install MySQLdb module.")
     exit()
 
 HOST = "localhost"
 PORT = 3306
 USER = "rename"
-PASS = ""
+PASS = "/*F0rCh1ldN@m3*/"
 DATABASE = "rename"
 
 
@@ -19,7 +19,11 @@ class DBOP(object):
     MySQL operation class for logging command logs and searching logs
     """
     def __init__(self):
-        self.db = MySQLdb.connect(HOST, USER, PASS, DATABASE, PORT, charset='utf8')
+        try:
+            self.db = pymysql.connect(HOST, USER, PASS, DATABASE, PORT, charset='utf8')
+        except pymysql.OperationalError as e:
+            print(e)
+            exit()
         self.cursor = self.db.cursor()
 
     def __del__(self):
@@ -30,7 +34,7 @@ class DBOP(object):
             decade_sql = 'INSERT INTO rn_decade(did, decade) VALUES(%s, %s)'
             self.cursor.execute(decade_sql, [did, decade])
             self.db.commit()
-        except MySQLdb.IntegrityError:
+        except pymysql.IntegrityError:
             pass
 
     def record_person(self, poet_list):
@@ -74,7 +78,7 @@ class DBOP(object):
     def get_wuxing_name(self, wuxing_list):
         wuxing_sql = 'SELECT word FROM rn_wuxing WHERE 1 and 1'
         for word in wuxing_list:
-            wuxing_sql += ' OR type="%s"' % (word.encode('utf-8'))
+            wuxing_sql += ' OR type="%s"' % word
         name_sql = 'SELECT wid, word FROM rn_word_unique ' \
                    'WHERE SUBSTR(word, 1, 1) IN (%s) AND SUBSTR(word, 2, 1) IN (%s)' % (wuxing_sql, wuxing_sql)
         self.cursor.execute(name_sql)

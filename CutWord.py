@@ -3,7 +3,7 @@
 try:
     import jieba
 except ImportError:
-    print "ERROR: You should install jieba module."
+    print("ERROR: You should install jieba module.")
     exit()
 
 from threading import *

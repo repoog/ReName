@@ -3,13 +3,13 @@
 try:
     import threadpool
 except ImportError:
-    print "[!_!]ERROR INFO: You have to install threadpool module."
+    print("[!_!]ERROR INFO: You have to install threadpool module.")
     exit()
 
 try:
     from bs4 import BeautifulSoup
 except ImportError:
-    print "[!_!]ERROR INFO: You have to install bs4 module."
+    print("[!_!]ERROR INFO: You have to install bs4 module.")
     exit()
 
 import requests
@@ -100,10 +100,10 @@ class POEM_CRAWLER(object):
         try:
             page_html = requests.get(self.host + uri, timeout=10)
         except requests.exceptions.ConnectionError:
-            print pid, uri
+            print(pid, uri)
             return None
         except requests.exceptions.ReadTimeout:
-            print pid, uri
+            print(pid, uri)
             return None
         page_html = page_html.content
         parse_file = BeautifulSoup(page_html, 'lxml')
@@ -141,11 +141,11 @@ class POEM_CRAWLER(object):
             parse_file = BeautifulSoup(page_html, 'lxml')
             content = parse_file.select('.shicineirong')
         except requests.exceptions.ConnectionError:
-            print wid, poem_uri
+            print(wid, poem_uri)
         except requests.exceptions.ReadTimeout:
-            print wid, poem_uri
+            print(wid, poem_uri)
         except UnboundLocalError:
-            print wid, poem_uri
+            print(wid, poem_uri)
         else:
             self.db_obj.record_content(wid, content[0].get_text())
         self.store_lock.release()

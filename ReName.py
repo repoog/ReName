@@ -1,12 +1,20 @@
 # coding=utf-8
 
-import random
-import argparse
 try:
     from boxcalendar import boxcalendar
 except ImportError:
-    print "[!_!]ERROR INFO: You have to install boxcalendar module."
+    print("[!_!]ERROR INFO: You have to install boxcalendar module.")
     exit()
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    print("[!_!]ERROR INFO: You have to install bs4 module.")
+    exit()
+
+import random
+import argparse
+import requests
 
 from include.DB import DBOP
 from include.boxcalendar import *
@@ -33,12 +41,12 @@ def compute_wuxing(year, month, day, hour):
     sky_branch = [u'甲', u'乙', u'丙', u'丁', u'戊', u'己', u'庚', u'辛', u'壬', u'癸']
 
     index = 0
-    for index in xrange(10):
+    for index in range(10):
         if day_stem == sky_branch[index]:
             break
 
     index_X = index - 5 if index >= 5 else index
-    index_Y = (hour + 1) / 2
+    index_Y = int((hour + 1) / 2)
 
     # Generate horoscope
     horoscope = horoscope[2] + '-' + time_stem_branch_list[index_Y][index_X]
@@ -72,32 +80,64 @@ def output_wuxing(year, month, day, hour):
     :return: attribute list
     """
     wuxing = compute_wuxing(year, month, day, hour)
-    print u"[-_-] 生辰：%s年%s月%s日, %s时" % (year, month, day, hour)
+    print("[-_-] 生辰：%s年%s月%s日, %s时" % (year, month, day, hour))
     attr_list = [attr for attr in wuxing if wuxing[attr] < 2]
-    print u"[-_-] 五行缺：%s\n" % ', '.join(attr_list)
+    print("[-_-] 五行缺：%s\n" % ', '.join(attr_list))
     return attr_list
 
 
-def output_name(attr_list):
+def name_score(name, sur_type=1):
+    """
+    Get number of name from 1518.com
+    :param name: full name
+    :param sur_type: surname single(1) or double(2)
+    :return: name score
+    """
+    header = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+              'Accept-Encoding': 'gzip, deflate',
+              'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+              'User-Agent': 'Chrome/63.0.3239.84 Safari/537.36'
+              }
+    name = str(name.encode('gbk')).split("'")[1].replace('\\x', '%')
+    name_url = 'http://m.1518.com/xingming_view.php?word={}&submit1=&FrontType={}'
+    page_html = requests.get(name_url.format(name, sur_type), headers=header)
+    page_html = page_html.content
+    parse_file = BeautifulSoup(page_html, 'lxml')
+    name_score = parse_file.select('dt > u strong')
+    try:
+        score = name_score[0].text
+    except IndexError:
+        score = 0
+    return int(score.split('分')[0])
+
+
+def output_name(surname, attr_list):
     """
     Output rand names and poem source.
     :param attr_list:
     :return:
     """
+    sur_type = 1 if len(surname) == 1 else 2
     db_obj = DBOP()
     name_tuple = db_obj.get_wuxing_name(attr_list)  # Get all match words
-    # Randomize output 5 names
-    for num in xrange(5):
+    # Output top 5 best names
+    num = 1
+    while 1:
+        if num > 5:
+            break
         index = random.randint(0, len(name_tuple)-1)
         name = name_tuple[index]
-        name_source = db_obj.get_name_source(name[0])
-        print u"[^_^] 候选名字%s：%s" % (str(num+1), name[1])
-        print u"[*_*] 出自：\n%s\n%s(%s)\n%s\n" % \
-              (name_source[2], name_source[1], name_source[0], name_source[3])
+        if name_score(surname + name[1], sur_type) > 95:
+            num += 1
+            name_source = db_obj.get_name_source(name[0])
+            print("[^_^] 候选名字：%s" % surname + name[1])
+            print("[*_*] 出自：\n%s\n%s(%s)\n%s\n" % \
+                  (name_source[2], name_source[1], name_source[0], name_source[3]))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Name children with birth datetime and WuXing balance.")
+    parser.add_argument("-s", metavar="surname", required=True, help="Surname.")
     parser.add_argument("-y", type=int, choices=range(1901, 2049), metavar="year", required=True,
                         help="Year of birth date.")
     parser.add_argument("-m", type=int, choices=range(1, 13), metavar="month", required=True,
@@ -109,4 +149,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     attr_list = output_wuxing(args.y, args.m, args.d, args.H)
-    output_name(attr_list)
+    output_name(args.s, attr_list)
