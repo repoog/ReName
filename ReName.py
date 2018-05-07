@@ -22,13 +22,11 @@ import sys
 import signal
 import asyncio
 from random import randint
-
 from include.DB import DBOP
 from include.boxcalendar import *
 
 
 OUTPUT_PATH = 'output/names.csv'
-
 
 def compute_wuxing(year, month, day, hour):
     horoscope = lunarday(year, month, day)
@@ -96,7 +94,7 @@ def output_wuxing(year, month, day, hour):
     return attr_list
 
 
-async def name_score(name, sur_type=1):
+def name_score(name, sur_type=1):
     """
     Get number of name from 1518.com
     :param name: full name
@@ -182,6 +180,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Name children with birth datetime and WuXing balance.")
     parser.add_argument("-s", metavar="surname", required=True, help="Surname.")
     parser.add_argument("-g", metavar="gender", choices=('F', 'M'), required=True, help="Gender(F/M).")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Name children with birth datetime and WuXing balance.")
+    parser.add_argument("-s", metavar="surname", required=True, help="Surname.")
     parser.add_argument("-y", type=int, choices=range(1901, 2049), metavar="year", required=True,
                         help="Year of birth date.")
     parser.add_argument("-m", type=int, choices=range(1, 13), metavar="month", required=True,
