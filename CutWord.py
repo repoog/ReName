@@ -1,5 +1,3 @@
-# coding=utf-8
-
 try:
     import jieba
 except ImportError:
@@ -15,8 +13,7 @@ store_lock = Semaphore()
 
 def record_word(poem):
     store_lock.acquire()
-    seg_poem = jieba.cut(poem[1])
-    word_list = (",".join(seg_poem)).split(',')
+    word_list = jieba.lcut_for_search(poem[1])
     for word in word_list:
         if len(word) == 2:
             db_obj.record_word(poem[0], word)

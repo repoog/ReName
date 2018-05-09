@@ -1,5 +1,3 @@
-# coding=utf-8
-
 try:
     import threadpool
 except ImportError:
@@ -20,15 +18,16 @@ from include.DB import DBOP
 
 class POEM_CRAWLER(object):
     def __init__(self):
-        self.host = "http://www.shicimingju.com/"
+        self.host = "http://www.shicimingju.com"
         self.db_obj = DBOP()
         self.store_lock = Semaphore()
 
     def decade_poet(self):
-        page_html = requests.get(self.host)
+        page_html = requests.get(self.host + "/category/all")
         page_html = page_html.content
         parse_file = BeautifulSoup(page_html, 'lxml')
-        decade_list = parse_file.select('div#left > div:nth-of-type(1) > ul > li > a')
+        decade_list = parse_file.select('div.www-main-container > div:nth-of-type(1) > a')
+        decade_list = decade_list[1:]
 
         thread_list = []
         did = 1
@@ -48,7 +47,7 @@ class POEM_CRAWLER(object):
 
         page = 1
         while 1:
-            poet_list = self.__poet_crawler(did, decade_uri + '/page/' + str(page))
+            poet_list = self.__poet_crawler(did, decade_uri + '__' + str(page))
             if poet_list:
                 self.db_obj.record_person(poet_list)
             else:
@@ -60,29 +59,32 @@ class POEM_CRAWLER(object):
         page_html = requests.get(self.host + decade_uri)
         page_html = page_html.content
         parse_file = BeautifulSoup(page_html, 'lxml')
-        person_list = parse_file.select('.shirenlist > ul > li > a')
+        person_list = parse_file.select('h3 > a')
 
         if not person_list:
             return None
 
         poet_list = []
         for person in person_list:
-            name = [name for name in person.stripped_strings][0]
-            poet_list.append([did, name, person['href']])
+            poet_list.append([did, person.get_text(), person['href']])
 
         return poet_list
 
     def poet_works(self):
         # Get all poet id and his/her works uri
-        poet_tuple = self.db_obj.get_person()
-        thread_list = []
-        for poet in poet_tuple:
-            t = Thread(target=self.__store_works, args=(poet[0], poet[1],))
-            t.start()
-            thread_list.append(t)
-
-        for thread in thread_list:
-            thread.join()
+        count = 0
+        while 1:
+            poet_tuple = self.db_obj.get_person(count)
+            if not poet_tuple:
+                break
+            thread_list = []
+            for poet in poet_tuple:
+                t = Thread(target=self.__store_works, args=(poet[0], poet[1],))
+                t.start()
+                thread_list.append(t)
+            for thread in thread_list:
+                thread.join()
+            count += 1
 
     def __store_works(self, pid, poet_uri):
         self.store_lock.acquire()
@@ -107,13 +109,13 @@ class POEM_CRAWLER(object):
             return None
         page_html = page_html.content
         parse_file = BeautifulSoup(page_html, 'lxml')
-        poem_list = parse_file.select('div.shicilist > ul > li:nth-of-type(1) > a')
+        poem_list = parse_file.select('h3 > a')
         if not poem_list:
             return None
 
         works_list = []
         for poem in poem_list:
-            works_list.append([pid, poem.get_text(), poem['href']])
+            works_list.append([pid, poem.get_text().strip(), poem['href']])
 
         return works_list
 
@@ -139,15 +141,16 @@ class POEM_CRAWLER(object):
             page_html = requests.get(self.host + poem_uri, timeout=10)
             page_html = page_html.content
             parse_file = BeautifulSoup(page_html, 'lxml')
-            content = parse_file.select('.shicineirong')
-        except requests.exceptions.ConnectionError:
-            print(wid, poem_uri)
-        except requests.exceptions.ReadTimeout:
-            print(wid, poem_uri)
-        except UnboundLocalError:
-            print(wid, poem_uri)
+            content = parse_file.select('.shici-content')
+        except ConnectionError as e:
+            print("ConnectionError: %s, %s" % (wid, poem_uri))
+        except TimeoutError as e:
+            print("TimeoutError: %s, %s" % (wid, poem_uri))
         else:
-            self.db_obj.record_content(wid, content[0].get_text())
+            try:
+                self.db_obj.record_content(wid, content[0].get_text().strip())
+            except IndexError as e:
+                print("IndexError: %s, %s" % (wid, poem_uri))
         self.store_lock.release()
 
 
@@ -155,8 +158,8 @@ if __name__ == '__main__':
     # Record decade and person information with crawler uri
     poem_obj = POEM_CRAWLER()
     # Crawling decade and poet information
-    poem_obj.decade_poet()
-    # Crawling each poem title and uri of poet
-    poem_obj.poet_works()
-    # Crawling each poem content of poem
+    # poem_obj.decade_poet()
+    # # Crawling each poem title and uri of poet
+    # poem_obj.poet_works()
+    # # Crawling each poem content of poem
     poem_obj.poem_content()

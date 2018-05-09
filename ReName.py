@@ -1,5 +1,3 @@
-# coding=utf-8
-
 try:
     from boxcalendar import boxcalendar
 except ImportError:
@@ -12,9 +10,11 @@ except ImportError:
     print("[!_!]ERROR INFO: You have to install bs4 module.")
     exit()
 
-import random
+import csv
 import argparse
 import requests
+import sys
+import signal
 
 from include.DB import DBOP
 from include.boxcalendar import *
@@ -120,22 +120,31 @@ def output_name(surname, attr_list):
     sur_type = 1 if len(surname) == 1 else 2
     db_obj = DBOP()
     name_tuple = db_obj.get_wuxing_name(attr_list)  # Get all match words
-    # Output top 5 best names
-    num = 1
-    while 1:
-        if num > 5:
-            break
-        index = random.randint(0, len(name_tuple)-1)
+    index = 0
+    while index < len(name_tuple):
         name = name_tuple[index]
-        if name_score(surname + name[1], sur_type) > 95:
-            num += 1
-            name_source = db_obj.get_name_source(name[0])
-            print("[^_^] 候选名字：%s" % surname + name[1])
-            print("[*_*] 出自：\n%s\n%s(%s)\n%s\n" % \
-                  (name_source[2], name_source[1], name_source[0], name_source[3]))
+        try:
+            score = name_score(surname + name[1], sur_type)
+            if score > 95:
+                print("[%s%%] 候选名字：%s" % (index / len(name_tuple) * 100, surname + name[1]))
+                name_source = db_obj.get_name_source(name[0])
+                with open('output/names.csv', 'a+', newline='') as fh:
+                    csv_f = csv.writer(fh)
+                    csv_f.writerow([surname + name[1], score, name_source[2], name_source[1], name_source[0], name_source[3]])
+        except Exception as e:
+            print(e)
+        finally:
+            index += 1
+
+
+def sigint_handler(signum, frame):
+    print('You pressed the Ctrl+C.')
+    sys.exit(0)
 
 
 if __name__ == '__main__':
+    signal.signal(signal.SIGINT, sigint_handler)
+
     parser = argparse.ArgumentParser(description="Name children with birth datetime and WuXing balance.")
     parser.add_argument("-s", metavar="surname", required=True, help="Surname.")
     parser.add_argument("-y", type=int, choices=range(1901, 2049), metavar="year", required=True,

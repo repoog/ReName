@@ -1,10 +1,8 @@
 #!/usr/bin/env python
-# coding = utf-8
-
 try:
     import pymysql
 except ImportError:
-    print("[!_!]ERROR INFO: You have to install MySQLdb module.")
+    print("[!_!]ERROR INFO: You have to install pymysql module.")
     exit()
 
 HOST = "localhost"
@@ -34,7 +32,7 @@ class DBOP(object):
             decade_sql = 'INSERT INTO rn_decade(did, decade) VALUES(%s, %s)'
             self.cursor.execute(decade_sql, [did, decade])
             self.db.commit()
-        except pymysql.IntegrityError:
+        except pymysql.IntegrityError as e:
             pass
 
     def record_person(self, poet_list):
@@ -42,9 +40,9 @@ class DBOP(object):
         self.cursor.executemany(person_sql, poet_list)
         self.db.commit()
 
-    def get_person(self):
-        person_sql = 'SELECT pid, uri FROM rn_person'
-        self.cursor.execute(person_sql)
+    def get_person(self, offset):
+        person_sql = 'SELECT pid, uri FROM rn_person LIMIT %s, 500'
+        self.cursor.execute(person_sql, [offset * 500])
         poet_set = self.cursor.fetchall()
         return poet_set
 
@@ -54,19 +52,22 @@ class DBOP(object):
         self.db.commit()
 
     def get_works(self, offset):
-        works_sql = 'SELECT wid, uri FROM rn_poem LIMIT %s, 10000'
-        self.cursor.execute(works_sql, [offset * 10000])
+        works_sql = 'SELECT wid, uri FROM rn_poem LIMIT %s, 500'
+        self.cursor.execute(works_sql, [offset * 500])
         poem_set = self.cursor.fetchall()
         return poem_set
 
     def record_content(self, wid, content):
-        poem_sql = 'INSERT INTO rn_content(wid, content) VALUES(%s, %s)'
-        self.cursor.execute(poem_sql, [wid, content])
-        self.db.commit()
+        try:
+            poem_sql = 'INSERT INTO rn_content(wid, content) VALUES(%s, %s)'
+            self.cursor.execute(poem_sql, [wid, content])
+            self.db.commit()
+        except pymysql.IntegrityError as e:
+            pass
 
     def get_content(self, offset):
-        content_sql = 'SELECT wid, content FROM rn_content LIMIT %s, 5000'
-        self.cursor.execute(content_sql, [offset * 5000])
+        content_sql = 'SELECT wid, content FROM rn_poem_content LIMIT %s, 500'
+        self.cursor.execute(content_sql, [offset * 500])
         poem_set = self.cursor.fetchall()
         return poem_set
 
