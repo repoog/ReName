@@ -1,23 +1,29 @@
 try:
-    from boxcalendar import boxcalendar
-except ImportError:
-    print("[!_!]ERROR INFO: You have to install boxcalendar module.")
-    exit()
-
-try:
     from bs4 import BeautifulSoup
 except ImportError:
     print("[!_!]ERROR INFO: You have to install bs4 module.")
     exit()
 
-import csv
+try:
+    import requests
+except ImportError:
+    print("[!_!]ERROR INFO: You have to install requests module.")
+    exit()
+
+try:
+    import ngender
+except ImportError:
+    print("[!_!]ERROR INFO: You have to install ngender module.")
+    exit()
+
 import argparse
-import requests
 import sys
 import signal
-
+from random import randint
 from include.DB import DBOP
 from include.boxcalendar import *
+
+SCORE_LINE = 95
 
 
 def compute_wuxing(year, month, day, hour):
@@ -69,23 +75,6 @@ def compute_wuxing(year, month, day, hour):
     return wuxing
 
 
-def output_wuxing(year, month, day, hour):
-    """
-    Compute WuXing with birth datetime.
-    :param year:
-    :param month:
-    :param day:
-    :param hour:
-    :param min:
-    :return: attribute list
-    """
-    wuxing = compute_wuxing(year, month, day, hour)
-    print("[-_-] 生辰：%s年%s月%s日, %s时" % (year, month, day, hour))
-    attr_list = [attr for attr in wuxing if wuxing[attr] < 2]
-    print("[-_-] 五行缺：%s\n" % ', '.join(attr_list))
-    return attr_list
-
-
 def name_score(name, sur_type=1):
     """
     Get number of name from 1518.com
@@ -105,36 +94,62 @@ def name_score(name, sur_type=1):
     parse_file = BeautifulSoup(page_html, 'lxml')
     name_score = parse_file.select('dt > u strong')
     try:
-        score = name_score[0].text
+        score = name_score[0].text.split('分')[0]
     except IndexError:
         score = 0
-    return int(score.split('分')[0])
+    finally:
+        score = int(score)
+    return True if score > SCORE_LINE else False
 
 
-def output_name(surname, attr_list):
+def output_wuxing(year, month, day, hour):
     """
-    Output rand names and poem source.
-    :param attr_list:
-    :return:
+    Compute WuXing with birth datetime.
+    :param year:
+    :param month:
+    :param day:
+    :param hour:
+    :return: attribute list
+    """
+    wuxing = compute_wuxing(year, month, day, hour)
+    print("[*] 出生日期：%s年%s月%s日, %s时" % (year, month, day, hour))
+    attr_list = [attr for attr in wuxing if wuxing[attr] < 2]
+    name_attr = list(set(['金', '木', '水', '火', '土']) - set(attr_list))
+    print("[*] 五行属性：%s\n" % ', '.join(name_attr))
+    return attr_list
+
+
+def filter_name(surname, gender, attr):
+    """
+    Filter names with gender, general name word and name score.
+    :param surname: surname of name.
+    :param gender: gender of name.
+    :param attr: attribute list of name.
+    :return: None
     """
     sur_type = 1 if len(surname) == 1 else 2
     db_obj = DBOP()
-    name_tuple = db_obj.get_wuxing_name(attr_list)  # Get all match words
-    index = 0
-    while index < len(name_tuple):
-        name = name_tuple[index]
-        try:
-            score = name_score(surname + name[1], sur_type)
-            if score > 95:
-                print("[%s%%] 候选名字：%s" % (index / len(name_tuple) * 100, surname + name[1]))
-                name_source = db_obj.get_name_source(name[0])
-                with open('output/names.csv', 'a+', newline='') as fh:
-                    csv_f = csv.writer(fh)
-                    csv_f.writerow([surname + name[1], score, name_source[2], name_source[1], name_source[0], name_source[3]])
-        except Exception as e:
-            print(e)
-        finally:
-            index += 1
+    name_tuple = db_obj.get_wuxing_name(attr)  # Get all match words
+    match_count = 0
+    while 1:
+        if match_count == 5:
+            break
+        name_info = name_tuple[randint(0, len(name_tuple))]
+        name_id, name = name_info[0], name_info[1]
+        full_name = surname + name
+        # Match gender and general name word.
+        if gender != ngender.guess(full_name)[0][0].upper() or not db_obj.match_name_word(name):
+            continue
+        if not name_score(full_name, sur_type):
+            continue
+        print("[-] 候选名字：%s" % full_name)
+        match_count += 1
+        name_source = db_obj.get_name_source(name_id)
+        print("[-] 名字出处：")
+        print(name_source[2])
+        print(name_source[1] + '(' + name_source[0] + ')')
+        print(name_source[3])
+        print('\n')
 
 
 def sigint_handler(signum, frame):
@@ -147,6 +162,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="Name children with birth datetime and WuXing balance.")
     parser.add_argument("-s", metavar="surname", required=True, help="Surname.")
+    parser.add_argument("-g", metavar="gender", choices=('F', 'M'), required=True, help="Gender(F/M).")
     parser.add_argument("-y", type=int, choices=range(1901, 2049), metavar="year", required=True,
                         help="Year of birth date.")
     parser.add_argument("-m", type=int, choices=range(1, 13), metavar="month", required=True,
@@ -158,4 +174,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     attr_list = output_wuxing(args.y, args.m, args.d, args.H)
-    output_name(args.s, attr_list)
+    filter_name(args.s, args.g, attr_list)
