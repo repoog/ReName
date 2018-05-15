@@ -20,8 +20,8 @@ import argparse
 import sys
 import signal
 from random import randint
-from include.DB import DBOP
-from include.boxcalendar import *
+from lib.DB import DBOP
+from lib.boxcalendar import *
 
 SCORE_LINE = 95
 
